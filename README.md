@@ -116,6 +116,13 @@ Depois disso,
 - Tolerância de staleness: 3600 segundos (1 hora)
 - O `rewardRate` do staking é calculado como `BASE_RATE × 1e8 / ethPrice`
 
+## TODO
+
+- Refatorar o frontend (separar em arquivos html, js (ou melhor, ts) e css)
+- Refatorar os comentários (escrever comentários em unicode é bonito, mas meio chato)
+- Realizar mais testes
+
+
 ## 📊 Rubrica atendida
 
 | Critério               | Implementação                                         |
