@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MemberDAO Protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
+<style>
+/* ── Reset & tokens ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #080c10;
+  --surface:   #0d1318;
+  --border:    #1a2530;
+  --border2:   #243040;
+  --text:      #c8d8e8;
+  --muted:     #5a7080;
+  --accent:    #00e5b4;
+  --accent2:   #0af0c8;
+  --warn:      #f0a500;
+  --danger:    #f05060;
+  --purple:    #a070ff;
+  --blue:      #3090ff;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --r:         6px;
+  --glow:      0 0 20px rgba(0,229,180,.15);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── Grid noise background ──────────────────────────────── */
+body::before {
+  content:'';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,180,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,180,.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.app { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* ── Header ─────────────────────────────────────────────── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-mark {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-weight: 800; font-size: 18px;
+  color: #000; flex-shrink: 0;
+  box-shadow: var(--glow);
+}
+.logo h1 { font-family: var(--font-head); font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+.logo p  { font-size: 11px; color: var(--muted); }
+
+.wallet-area { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+#network-badge {
+  font-size: 10px; padding: 3px 10px; border-radius: 99px;
+  border: 1px solid var(--border2); color: var(--muted);
+  display: none;
+}
+#network-badge.visible { display: block; }
+#network-badge.ok  { border-color: var(--accent); color: var(--accent); }
+#network-badge.bad { border-color: var(--danger); color: var(--danger); }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--r);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  cursor: pointer; border: none; transition: all .18s;
+  text-transform: uppercase; letter-spacing: .5px;
+  position: relative; overflow: hidden;
+}
+.btn::after {
+  content:''; position:absolute; inset:0;
+  background: rgba(255,255,255,.07); opacity:0; transition: opacity .15s;
+}
+.btn:hover::after { opacity:1; }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+
+.btn-primary  { background: var(--accent); color: #000; }
+.btn-outline  { background: transparent; border: 1px solid var(--border2); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-warn     { background: var(--warn); color: #000; }
+.btn-danger   { background: var(--danger); color: #fff; }
+.btn-purple   { background: var(--purple); color: #fff; }
+.btn-blue     { background: var(--blue); color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+.btn-full { width: 100%; justify-content: center; }
+.spin { animation: spin .7s linear infinite; display:inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Cards ───────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  transition: border-color .2s;
+}
+.card:hover { border-color: var(--border2); }
+
+.card-title {
+  font-family: var(--font-head); font-size: 15px; font-weight: 700;
+  color: #fff; margin-bottom: 4px; letter-spacing: -.2px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+
+/* ── Stats bar ───────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+.stat-value { font-size: 20px; font-weight: 700; color: #fff; font-family: var(--font-head); }
+.stat-value.accent { color: var(--accent); }
+.stat-value.warn   { color: var(--warn); }
+.stat-value.purple { color: var(--purple); }
+.stat-unit  { font-size: 11px; color: var(--muted); margin-left: 3px; }
+
+/* ── Tabs ────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+.tab {
+  padding: 10px 18px; font-family: var(--font-mono); font-size: 12px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  cursor: pointer; border: none; background: transparent;
+  color: var(--muted); border-bottom: 2px solid transparent;
+  transition: all .18s; margin-bottom: -1px;
+}
+.tab:hover  { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Forms ───────────────────────────────────────────────── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+.field input, .field textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 10px 14px;
+  font-family: var(--font-mono); font-size: 13px; color: var(--text);
+  transition: border-color .18s; outline: none;
+}
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 80px; }
+.field-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+
+/* ── Proposal list ───────────────────────────────────────── */
+.proposal-item {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 18px; margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.proposal-item:hover { border-color: var(--border2); }
+
+.proposal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.proposal-title  { font-family: var(--font-head); font-size: 14px; color: #fff; font-weight: 600; }
+.proposal-id     { font-size: 10px; color: var(--muted); }
+.proposal-desc   { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+
+.badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 99px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+}
+.badge-active   { background: rgba(0,229,180,.15); color: var(--accent); border: 1px solid rgba(0,229,180,.3); }
+.badge-passed   { background: rgba(48,144,255,.15); color: var(--blue); border: 1px solid rgba(48,144,255,.3); }
+.badge-rejected { background: rgba(240,80,96,.15); color: var(--danger); border: 1px solid rgba(240,80,96,.3); }
+.badge-executed { background: rgba(160,112,255,.15); color: var(--purple); border: 1px solid rgba(160,112,255,.3); }
+.badge-nft      { background: rgba(240,165,0,.15); color: var(--warn); border: 1px solid rgba(240,165,0,.3); }
+
+.vote-bar-wrap { margin-bottom: 10px; }
+.vote-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.vote-bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.vote-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--blue)); border-radius: 3px; transition: width .4s; }
+
+.vote-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.deadline { font-size: 10px; color: var(--muted); }
+
+/* ── Toast ───────────────────────────────────────────────── */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 12px 18px;
+  font-size: 12px; color: var(--text); max-width: 320px;
+  animation: slideIn .2s ease; box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  display: flex; align-items: center; gap: 10px;
+}
+.toast.success { border-color: var(--accent); }
+.toast.error   { border-color: var(--danger); }
+.toast.warning { border-color: var(--warn); }
+@keyframes slideIn { from { transform: translateX(20px); opacity:0; } to { transform: none; opacity:1; } }
+
+/* ── Connect overlay ────────────────────────────────────── */
+#connect-overlay {
+  position: fixed; inset: 0; background: rgba(8,12,16,.96);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(4px);
+}
+.connect-box {
+  text-align: center; max-width: 340px; padding: 40px 32px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; box-shadow: var(--glow);
+}
+.connect-logo { font-size: 48px; margin-bottom: 16px; }
+.connect-box h2 { font-family: var(--font-head); font-size: 22px; color: #fff; margin-bottom: 8px; }
+.connect-box p  { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 24px; }
+
+/* ── Section spacing ─────────────────────────────────────── */
+.section-gap { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ── Info row ─────────────────────────────────────────────── */
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.info-row:last-child { border-bottom: none; }
+.info-row .key   { font-size: 11px; color: var(--muted); }
+.info-row .val   { font-size: 12px; color: var(--text); font-weight: 700; }
+.info-row .val.accent { color: var(--accent); }
+
+/* ── Wallet address pill ─────────────────────────────────── */
+.addr-pill {
+  font-size: 11px; padding: 4px 10px; border-radius: 99px;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--muted); font-family: var(--font-mono);
+}
+
+/* ── Loader ──────────────────────────────────────────────── */
+.skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--border2) 50%, var(--border) 75%); background-size: 200%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+@keyframes shimmer { to { background-position: -200%; } }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 600px) {
+  header { flex-direction: column; gap: 16px; align-items: flex-start; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .field-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Connect overlay ──────────────────────────────────── -->
+<div id="connect-overlay">
+  <div class="connect-box">
+    <div class="connect-logo">⬡</div>
+    <h2>MemberDAO Protocol</h2>
+    <p>Conecte sua carteira MetaMask para acessar o protocolo descentralizado.</p>
+    <button class="btn btn-primary btn-full" onclick="connectWallet()">
+      Conectar MetaMask
+    </button>
+    <p style="margin-top:12px;font-size:10px;color:var(--muted)">Rede: Sepolia Testnet (Chain ID 11155111)</p>
+  </div>
+</div>
+
+<!-- ── App ──────────────────────────────────────────────── -->
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-mark">M</div>
+      <div>
+        <h1>MemberDAO Protocol</h1>
+        <p>ERC-20 · NFT · Staking · DAO · Chainlink</p>
+      </div>
+    </div>
+    <div class="wallet-area">
+      <span id="network-badge">Sepolia</span>
+      <span id="addr-pill" class="addr-pill" style="display:none"></span>
+      <button class="btn btn-outline btn-sm" id="disconnect-btn" style="display:none" onclick="disconnect()">Desconectar</button>
+    </div>
+  </header>
+
+  <!-- Stats globais -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">GTK Balance</div>
+      <div class="stat-value accent" id="stat-gtk">—<span class="stat-unit">GTK</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Staked</div>
+      <div class="stat-value warn" id="stat-staked">—<span class="stat-unit">GTK</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Recompensas</div>
+      <div class="stat-value accent" id="stat-rewards">—<span class="stat-unit">GTK</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ETH/USD</div>
+      <div class="stat-value purple" id="stat-price">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">MemberPass NFT</div>
+      <div class="stat-value" id="stat-nft">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Propostas Ativas</div>
+      <div class="stat-value purple" id="stat-proposals">—</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('nft')">① NFT</button>
+    <button class="tab" onclick="switchTab('token')">② Token</button>
+    <button class="tab" onclick="switchTab('staking')">③ Staking</button>
+    <button class="tab" onclick="switchTab('dao')">④ DAO</button>
+    <button class="tab" onclick="switchTab('info')">ℹ Info</button>
+  </div>
+
+  <!-- ── Aba NFT ── -->
+  <div class="tab-panel active" id="panel-nft">
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-title">🪪 MemberPass NFT</div>
+        <div class="card-subtitle">Credencial de acesso ao protocolo. Cada endereço pode mintar 1 NFT.</div>
+        <div id="nft-status-area">
+          <div class="info-row"><span class="key">Status</span><span class="val" id="nft-status-txt">Carregando...</span></div>
+          <div class="info-row"><span class="key">Preço de Mint</span><span class="val accent" id="nft-price-txt">0.01 ETH</span></div>
+          <div class="info-row"><span class="key">Total Mintado</span><span class="val" id="nft-supply-txt">—</span></div>
+        </div>
+        <hr class="divider"/>
+        <div id="mint-area">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+            O MemberPass é necessário para participar do staking. Apenas 1 por endereço.
+          </p>
+          <button class="btn btn-warn btn-full" id="btn-mint-nft" onclick="mintNFT()">
+            Mintar MemberPass NFT (0.01 ETH)
+          </button>
+        </div>
+        <div id="has-nft-area" style="display:none">
+          <div style="text-align:center;padding:16px 0">
+            <div style="font-size:36px;margin-bottom:8px">🎫</div>
+            <div style="font-family:var(--font-head);font-size:15px;color:var(--accent);font-weight:700">Você é membro!</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Token ID: <span id="nft-token-id">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Aba Token ── -->
+  <div class="tab-panel" id="panel-token">
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-title">🪙 GovToken (GTK)</div>
+        <div class="card-subtitle">Token ERC-20 de governança. Usado para staking e votação na DAO.</div>
+        <div class="info-row"><span class="key">Seu saldo</span><span class="val accent" id="gtk-balance-txt">—</span></div>
+        <div class="info-row"><span class="key">Poder de voto</span><span class="val" id="gtk-votes-txt">—</span></div>
+        <div class="info-row"><span class="key">Supply total</span><span class="val" id="gtk-supply-txt">—</span></div>
+        <div class="info-row"><span class="key">Contrato</span><span class="val" id="gtk-addr-txt" style="font-size:10px;word-break:break-all">—</span></div>
+        <hr class="divider"/>
+        <div class="card-title" style="font-size:13px;margin-bottom:12px">Transferir GTK</div>
+        <div class="field">
+          <label>Endereço destinatário</label>
+          <input type="text" id="transfer-to" placeholder="0x..."/>
+        </div>
+        <div class="field">
+          <label>Quantidade (GTK)</label>
+          <input type="number" id="transfer-amount" placeholder="100"/>
+        </div>
+        <button class="btn btn-outline btn-full" onclick="transferToken()">Transferir GTK</button>
+        <hr class="divider"/>
+        <div class="card-title" style="font-size:13px;margin-bottom:12px">Delegar Votos</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Delegue seu poder de voto para participar da DAO. Você pode delegar para si mesmo.</p>
+        <div class="field-row">
+          <div class="field" style="margin:0">
+            <label>Delegado</label>
+            <input type="text" id="delegate-to" placeholder="0x... (ou deixe vazio p/ self-delegate)"/>
+          </div>
+          <button class="btn btn-blue" onclick="delegateVotes()">Delegar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Aba Staking ── -->
+  <div class="tab-panel" id="panel-staking">
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-title">⚡ Staking Pool</div>
+        <div class="card-subtitle">Deposite GTK para acumular recompensas ajustadas pelo preço ETH/USD (Chainlink).</div>
+        <div class="info-row"><span class="key">Seu stake</span><span class="val warn" id="stk-staked-txt">—</span></div>
+        <div class="info-row"><span class="key">Recompensas pendentes</span><span class="val accent" id="stk-earned-txt">—</span></div>
+        <div class="info-row"><span class="key">Total no pool</span><span class="val" id="stk-total-txt">—</span></div>
+        <div class="info-row"><span class="key">Taxa atual (GTK/s)</span><span class="val" id="stk-rate-txt">—</span></div>
+        <div class="info-row"><span class="key">Preço ETH</span><span class="val purple" id="stk-price-txt">—</span></div>
+        <hr class="divider"/>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <div class="card-title" style="font-size:13px;margin-bottom:8px">Depositar</div>
+            <div class="field">
+              <label>Quantidade (GTK)</label>
+              <input type="number" id="stake-amount" placeholder="100"/>
+            </div>
+            <button class="btn btn-warn btn-full" onclick="doStake()">Stake GTK</button>
+          </div>
+          <div>
+            <div class="card-title" style="font-size:13px;margin-bottom:8px">Retirar</div>
+            <div class="field">
+              <label>Quantidade (GTK)</label>
+              <input type="number" id="withdraw-amount" placeholder="100"/>
+            </div>
+            <button class="btn btn-outline btn-full" onclick="doWithdraw()">Withdraw</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="btn btn-primary btn-full" onclick="claimRewards()">Coletar Recompensas</button>
+          <button class="btn btn-danger btn-full" onclick="exitStaking()">Exit (tudo)</button>
+        </div>
+
+        <div id="no-nft-warning" style="display:none;margin-top:14px;padding:10px 14px;background:rgba(240,80,96,.08);border:1px solid rgba(240,80,96,.3);border-radius:6px;font-size:12px;color:var(--danger)">
+          ⚠ Você precisa do MemberPass NFT para fazer staking. Acesse a aba NFT primeiro.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Aba DAO ── -->
+  <div class="tab-panel" id="panel-dao">
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-title">🗳️ Criar Proposta</div>
+        <div class="card-subtitle">Mínimo de 1.000 GTK para criar propostas.</div>
+        <div class="field">
+          <label>Título (máx 100 chars)</label>
+          <input type="text" id="prop-title" placeholder="Ex: Aumentar taxa de recompensa em 20%"/>
+        </div>
+        <div class="field">
+          <label>Descrição detalhada</label>
+          <textarea id="prop-desc" placeholder="Descreva a proposta e sua justificativa..."></textarea>
+        </div>
+        <button class="btn btn-purple btn-full" onclick="createProposal()">Criar Proposta</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Propostas</div>
+        <div class="card-subtitle">Vote nas propostas ativas. Peso = seu saldo GTK.</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-outline btn-sm" onclick="loadProposals()">↺ Atualizar</button>
+          <button class="btn btn-outline btn-sm" onclick="filterProposals('all')">Todas</button>
+          <button class="btn btn-outline btn-sm" onclick="filterProposals('active')">Ativas</button>
+        </div>
+        <div id="proposals-list">
+          <div style="color:var(--muted);font-size:12px;padding:20px 0;text-align:center">Carregando propostas...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Aba Info ── -->
+  <div class="tab-panel" id="panel-info">
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-title">📍 Endereços dos Contratos</div>
+        <div class="card-subtitle">Deploy na Sepolia Testnet</div>
+        <div id="contract-addresses">
+          <div class="info-row"><span class="key">GovToken (GTK)</span><span class="val" id="addr-govtoken" style="font-size:10px;word-break:break-all">—</span></div>
+          <div class="info-row"><span class="key">MemberPassNFT</span><span class="val" id="addr-memberpass" style="font-size:10px;word-break:break-all">—</span></div>
+          <div class="info-row"><span class="key">PriceConsumer</span><span class="val" id="addr-price" style="font-size:10px;word-break:break-all">—</span></div>
+          <div class="info-row"><span class="key">StakingPool</span><span class="val" id="addr-staking" style="font-size:10px;word-break:break-all">—</span></div>
+          <div class="info-row"><span class="key">MemberDAO</span><span class="val" id="addr-dao" style="font-size:10px;word-break:break-all">—</span></div>
+        </div>
+        <hr class="divider"/>
+        <div class="card-title" style="font-size:13px;margin-bottom:12px">Configurar Endereços</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Cole os endereços após o deploy. Em produção, carregue do arquivo addresses.json.</p>
+        <div class="field"><label>GovToken</label><input type="text" id="cfg-govtoken" placeholder="0x..."/></div>
+        <div class="field"><label>MemberPassNFT</label><input type="text" id="cfg-memberpass" placeholder="0x..."/></div>
+        <div class="field"><label>StakingPool</label><input type="text" id="cfg-staking" placeholder="0x..."/></div>
+        <div class="field"><label>MemberDAO</label><input type="text" id="cfg-dao" placeholder="0x..."/></div>
+        <button class="btn btn-primary" onclick="saveAddresses()">Salvar & Conectar Contratos</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  ABIs mínimas dos contratos (apenas funções usadas no frontend)
+// ═══════════════════════════════════════════════════════════════════
+const ABI = {
+  govToken: [
+    "function balanceOf(address) view returns (uint256)",
+    "function totalSupply() view returns (uint256)",
+    "function getVotes(address) view returns (uint256)",
+    "function delegate(address) external",
+    "function transfer(address, uint256) returns (bool)",
+    "function approve(address, uint256) returns (bool)",
+    "function allowance(address, address) view returns (uint256)",
+    "event Transfer(address indexed from, address indexed to, uint256 value)"
+  ],
+  memberPass: [
+    "function mint() external payable",
+    "function balanceOf(address) view returns (uint256)",
+    "function hasMinted(address) view returns (bool)",
+    "function mintPrice() view returns (uint256)",
+    "function totalSupply() view returns (uint256)",
+    "function tokenOfOwnerByIndex(address, uint256) view returns (uint256)",
+    "event MemberMinted(address indexed member, uint256 tokenId)"
+  ],
+  staking: [
+    "function stake(uint256) external",
+    "function withdraw(uint256) external",
+    "function claimRewards() external",
+    "function exit() external",
+    "function earned(address) view returns (uint256)",
+    "function users(address) view returns (uint256 staked, uint256 rewardPerTokenPaid, uint256 pendingRewards)",
+    "function totalStaked() view returns (uint256)",
+    "function currentRewardRate() view returns (uint256)",
+    "function currentEthPrice() view returns (int256)",
+    "event Staked(address indexed user, uint256 amount)",
+    "event RewardClaimed(address indexed user, uint256 reward)"
+  ],
+  dao: [
+    "function propose(string, string) external returns (uint256)",
+    "function vote(uint256, bool) external",
+    "function finalize(uint256) external",
+    "function proposalCount() view returns (uint256)",
+    "function proposals(uint256) view returns (uint256 id, address proposer, string title, string description, uint256 createdAt, uint256 deadline, uint256 votesFor, uint256 votesAgainst, uint256 snapshotBlock, uint8 state, bool executed)",
+    "function hasVoted(uint256, address) view returns (bool)",
+    "function proposalThreshold() view returns (uint256)",
+    "event ProposalCreated(uint256 indexed id, address indexed proposer, string title, uint256 deadline)"
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  Estado da aplicação
+// ═══════════════════════════════════════════════════════════════════
+let provider, signer, userAddress;
+let contracts = { govToken: null, memberPass: null, staking: null, dao: null };
+let addrs = {};
+let allProposals = [];
+let refreshInterval = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  Wallet
+// ═══════════════════════════════════════════════════════════════════
+async function connectWallet() {
+  if (!window.ethereum) { toast("MetaMask não encontrado!", "error"); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // Tenta carregar endereços salvos no localStorage
+    const saved = localStorage.getItem("memberdao_addrs");
+    if (saved) { addrs = JSON.parse(saved); initContracts(); }
+
+    document.getElementById("connect-overlay").style.display = "none";
+    document.getElementById("addr-pill").textContent = shortAddr(userAddress);
+    document.getElementById("addr-pill").style.display = "";
+    document.getElementById("disconnect-btn").style.display = "";
+
+    await checkNetwork();
+    await refreshAll();
+
+    refreshInterval = setInterval(refreshAll, 15000);
+
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged",    () => location.reload());
+  } catch (e) {
+    toast("Erro ao conectar: " + e.message, "error");
+  }
+}
+
+function disconnect() {
+  clearInterval(refreshInterval);
+  location.reload();
+}
+
+async function checkNetwork() {
+  const net   = await provider.getNetwork();
+  const badge = document.getElementById("network-badge");
+  badge.classList.add("visible");
+  if (net.chainId === 11155111n) {
+    badge.textContent = "Sepolia ✓"; badge.className = "visible ok";
+  } else if (net.chainId === 31337n) {
+    badge.textContent = "Localhost ✓"; badge.className = "visible ok";
+  } else {
+    badge.textContent = `Chain ${net.chainId} ✗`; badge.className = "visible bad";
+    toast("Rede incorreta — use Sepolia (11155111)", "warning");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Contratos
+// ═══════════════════════════════════════════════════════════════════
+function initContracts() {
+  if (addrs.govToken)   contracts.govToken  = new ethers.Contract(addrs.govToken,   ABI.govToken,   signer);
+  if (addrs.memberPass) contracts.memberPass = new ethers.Contract(addrs.memberPass, ABI.memberPass, signer);
+  if (addrs.staking)    contracts.staking   = new ethers.Contract(addrs.staking,    ABI.staking,    signer);
+  if (addrs.dao)        contracts.dao       = new ethers.Contract(addrs.dao,        ABI.dao,        signer);
+
+  // Preenche campos de info
+  document.getElementById("addr-govtoken").textContent  = addrs.govToken  || "—";
+  document.getElementById("addr-memberpass").textContent = addrs.memberPass || "—";
+  document.getElementById("addr-price").textContent     = addrs.priceConsumer || "—";
+  document.getElementById("addr-staking").textContent   = addrs.staking   || "—";
+  document.getElementById("addr-dao").textContent       = addrs.dao       || "—";
+  document.getElementById("gtk-addr-txt").textContent   = addrs.govToken  || "—";
+}
+
+function saveAddresses() {
+  addrs = {
+    govToken:   document.getElementById("cfg-govtoken").value.trim(),
+    memberPass: document.getElementById("cfg-memberpass").value.trim(),
+    staking:    document.getElementById("cfg-staking").value.trim(),
+    dao:        document.getElementById("cfg-dao").value.trim(),
+  };
+  localStorage.setItem("memberdao_addrs", JSON.stringify(addrs));
+  initContracts();
+  refreshAll();
+  toast("Endereços salvos!", "success");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Refresh de dados
+// ═══════════════════════════════════════════════════════════════════
+async function refreshAll() {
+  await Promise.allSettled([
+    refreshToken(), refreshNFT(), refreshStaking(), refreshDAO()
+  ]);
+}
+
+async function refreshToken() {
+  if (!contracts.govToken || !userAddress) return;
+  try {
+    const [bal, supply, votes] = await Promise.all([
+      contracts.govToken.balanceOf(userAddress),
+      contracts.govToken.totalSupply(),
+      contracts.govToken.getVotes(userAddress),
+    ]);
+    const fmt = v => Number(ethers.formatEther(v)).toLocaleString("pt-BR", {maximumFractionDigits:2});
+    document.getElementById("stat-gtk").innerHTML         = fmt(bal) + '<span class="stat-unit">GTK</span>';
+    document.getElementById("gtk-balance-txt").textContent = fmt(bal) + " GTK";
+    document.getElementById("gtk-supply-txt").textContent  = fmt(supply) + " GTK";
+    document.getElementById("gtk-votes-txt").textContent   = fmt(votes) + " GTK";
+  } catch {}
+}
+
+async function refreshNFT() {
+  if (!contracts.memberPass || !userAddress) return;
+  try {
+    const [hasMinted, mintPrice, supply] = await Promise.all([
+      contracts.memberPass.hasMinted(userAddress),
+      contracts.memberPass.mintPrice(),
+      contracts.memberPass.totalSupply(),
+    ]);
+    document.getElementById("nft-supply-txt").textContent = supply.toString() + " NFTs";
+    document.getElementById("nft-price-txt").textContent  = ethers.formatEther(mintPrice) + " ETH";
+    document.getElementById("stat-nft").innerHTML = hasMinted
+      ? '<span class="badge badge-nft">Membro ✓</span>'
+      : '<span style="color:var(--muted)">Não membro</span>';
+
+    document.getElementById("nft-status-txt").textContent = hasMinted ? "✓ Você possui MemberPass" : "Não mintado";
+    document.getElementById("mint-area").style.display    = hasMinted ? "none" : "";
+    document.getElementById("has-nft-area").style.display = hasMinted ? "" : "none";
+    document.getElementById("no-nft-warning").style.display = hasMinted ? "none" : "";
+  } catch {}
+}
+
+async function refreshStaking() {
+  if (!contracts.staking || !userAddress) return;
+  try {
+    const [info, earned, total, rate, price] = await Promise.all([
+      contracts.staking.users(userAddress),
+      contracts.staking.earned(userAddress),
+      contracts.staking.totalStaked(),
+      contracts.staking.currentRewardRate(),
+      contracts.staking.currentEthPrice(),
+    ]);
+    const fmt = v => Number(ethers.formatEther(v)).toLocaleString("pt-BR", {maximumFractionDigits:4});
+    document.getElementById("stk-staked-txt").textContent  = fmt(info.staked) + " GTK";
+    document.getElementById("stk-earned-txt").textContent  = fmt(earned) + " GTK";
+    document.getElementById("stk-total-txt").textContent   = fmt(total) + " GTK";
+    document.getElementById("stk-rate-txt").textContent    = Number(ethers.formatEther(rate)).toFixed(6) + " GTK/s";
+    document.getElementById("stk-price-txt").textContent   = "$ " + (Number(price) / 1e8).toLocaleString("pt-BR", {maximumFractionDigits:2});
+    document.getElementById("stat-staked").innerHTML       = fmt(info.staked) + '<span class="stat-unit">GTK</span>';
+    document.getElementById("stat-rewards").innerHTML      = fmt(earned) + '<span class="stat-unit">GTK</span>';
+    document.getElementById("stat-price").textContent      = "$ " + (Number(price) / 1e8).toLocaleString("pt-BR", {maximumFractionDigits:0});
+  } catch {}
+}
+
+async function refreshDAO() {
+  if (!contracts.dao) return;
+  try {
+    const count = Number(await contracts.dao.proposalCount());
+    document.getElementById("stat-proposals").textContent = count;
+    await loadProposals();
+  } catch {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  NFT
+// ═══════════════════════════════════════════════════════════════════
+async function mintNFT() {
+  if (!contracts.memberPass) { toast("Configure os endereços na aba Info", "warning"); return; }
+  const btn = document.getElementById("btn-mint-nft");
+  try {
+    setLoading(btn, true);
+    const mintPrice = await contracts.memberPass.mintPrice();
+    const tx = await contracts.memberPass.mint({ value: mintPrice });
+    toast("Transação enviada! Aguardando confirmação...", "success");
+    await tx.wait();
+    toast("MemberPass NFT mintado com sucesso! 🎫", "success");
+    await refreshNFT();
+  } catch (e) {
+    toast(parseError(e), "error");
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Token
+// ═══════════════════════════════════════════════════════════════════
+async function transferToken() {
+  if (!contracts.govToken) { toast("Configure os endereços", "warning"); return; }
+  const to     = document.getElementById("transfer-to").value.trim();
+  const amount = document.getElementById("transfer-amount").value.trim();
+  if (!to || !amount) { toast("Preencha todos os campos", "warning"); return; }
+  try {
+    const tx = await contracts.govToken.transfer(to, ethers.parseEther(amount));
+    toast("Transferência enviada...", "success");
+    await tx.wait();
+    toast(`${amount} GTK transferidos com sucesso!`, "success");
+    await refreshToken();
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+async function delegateVotes() {
+  if (!contracts.govToken) { toast("Configure os endereços", "warning"); return; }
+  const to = (document.getElementById("delegate-to").value.trim()) || userAddress;
+  try {
+    const tx = await contracts.govToken.delegate(to);
+    toast("Delegação enviada...", "success");
+    await tx.wait();
+    toast("Votos delegados com sucesso!", "success");
+    await refreshToken();
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Staking
+// ═══════════════════════════════════════════════════════════════════
+async function doStake() {
+  if (!contracts.staking || !contracts.govToken) { toast("Configure os endereços", "warning"); return; }
+  const amount = document.getElementById("stake-amount").value.trim();
+  if (!amount || Number(amount) <= 0) { toast("Informe a quantidade", "warning"); return; }
+  try {
+    const parsed = ethers.parseEther(amount);
+    // Primeiro aprova o StakingPool a gastar os tokens
+    const allowance = await contracts.govToken.allowance(userAddress, addrs.staking);
+    if (allowance < parsed) {
+      toast("Aprovando GTK...", "success");
+      const approveTx = await contracts.govToken.approve(addrs.staking, ethers.MaxUint256);
+      await approveTx.wait();
+    }
+    const tx = await contracts.staking.stake(parsed);
+    toast("Stake enviado...", "success");
+    await tx.wait();
+    toast(`${amount} GTK em stake! ⚡`, "success");
+    await Promise.all([refreshToken(), refreshStaking()]);
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+async function doWithdraw() {
+  if (!contracts.staking) { toast("Configure os endereços", "warning"); return; }
+  const amount = document.getElementById("withdraw-amount").value.trim();
+  if (!amount || Number(amount) <= 0) { toast("Informe a quantidade", "warning"); return; }
+  try {
+    const tx = await contracts.staking.withdraw(ethers.parseEther(amount));
+    toast("Retirada enviada...", "success");
+    await tx.wait();
+    toast(`${amount} GTK retirados!`, "success");
+    await Promise.all([refreshToken(), refreshStaking()]);
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+async function claimRewards() {
+  if (!contracts.staking) { toast("Configure os endereços", "warning"); return; }
+  try {
+    const tx = await contracts.staking.claimRewards();
+    toast("Coletando recompensas...", "success");
+    await tx.wait();
+    toast("Recompensas coletadas! 🎉", "success");
+    await Promise.all([refreshToken(), refreshStaking()]);
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+async function exitStaking() {
+  if (!contracts.staking) { toast("Configure os endereços", "warning"); return; }
+  if (!confirm("Retirar todo o stake e coletar recompensas?")) return;
+  try {
+    const tx = await contracts.staking.exit();
+    toast("Exit enviado...", "success");
+    await tx.wait();
+    toast("Exit completo! Stake e recompensas recebidos.", "success");
+    await Promise.all([refreshToken(), refreshStaking()]);
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DAO
+// ═══════════════════════════════════════════════════════════════════
+async function createProposal() {
+  if (!contracts.dao) { toast("Configure os endereços", "warning"); return; }
+  const title = document.getElementById("prop-title").value.trim();
+  const desc  = document.getElementById("prop-desc").value.trim();
+  if (!title || !desc) { toast("Preencha título e descrição", "warning"); return; }
+  try {
+    const tx = await contracts.dao.propose(title, desc);
+    toast("Proposta enviada...", "success");
+    const receipt = await tx.wait();
+    toast("Proposta criada com sucesso! 🗳️", "success");
+    document.getElementById("prop-title").value = "";
+    document.getElementById("prop-desc").value  = "";
+    await loadProposals();
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+async function loadProposals() {
+  if (!contracts.dao) return;
+  const el = document.getElementById("proposals-list");
+  try {
+    const count = Number(await contracts.dao.proposalCount());
+    allProposals = [];
+    for (let i = count - 1; i >= 0 && i >= count - 20; i--) {
+      const p = await contracts.dao.proposals(i);
+      const voted = await contracts.dao.hasVoted(i, userAddress);
+      allProposals.push({ ...p, voted });
+    }
+    renderProposals(allProposals);
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Erro ao carregar propostas</div>`;
+  }
+}
+
+let currentFilter = "all";
+function filterProposals(f) { currentFilter = f; renderProposals(allProposals); }
+
+function renderProposals(list) {
+  const el = document.getElementById("proposals-list");
+  const STATES = ["Active","Passed","Rejected","Executed","Cancelled"];
+  const stateClass = ["badge-active","badge-passed","badge-rejected","badge-executed","badge-rejected"];
+
+  const filtered = currentFilter === "active"
+    ? list.filter(p => Number(p.state) === 0)
+    : list;
+
+  if (!filtered.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:24px">Nenhuma proposta encontrada.</div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(p => {
+    const totalVotes = Number(p.votesFor) + Number(p.votesAgainst);
+    const pct = totalVotes > 0 ? Math.round(Number(p.votesFor) / totalVotes * 100) : 0;
+    const deadline = new Date(Number(p.deadline) * 1000).toLocaleDateString("pt-BR");
+    const isActive = Number(p.state) === 0 && Date.now() / 1000 < Number(p.deadline);
+    const fmtVotes = v => (Number(ethers.formatEther(v)) / 1000).toFixed(1) + "k";
+
+    return `
+    <div class="proposal-item">
+      <div class="proposal-header">
+        <div>
+          <div class="proposal-id">#${p.id} · ${p.proposer.slice(0,8)}...</div>
+          <div class="proposal-title">${escHtml(p.title)}</div>
+        </div>
+        <span class="badge ${stateClass[Number(p.state)]}">${STATES[Number(p.state)]}</span>
+      </div>
+      <div class="proposal-desc">${escHtml(p.description)}</div>
+      <div class="vote-bar-wrap">
+        <div class="vote-labels">
+          <span>✅ Favor: ${fmtVotes(p.votesFor)} GTK</span>
+          <span>${pct}%</span>
+          <span>❌ Contra: ${fmtVotes(p.votesAgainst)} GTK</span>
+        </div>
+        <div class="vote-bar"><div class="vote-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="deadline">Prazo: ${deadline}</div>
+        <div class="vote-actions">
+          ${isActive && !p.voted ? `
+            <button class="btn btn-primary btn-sm" onclick="castVote(${p.id}, true)">✅ Favor</button>
+            <button class="btn btn-danger btn-sm" onclick="castVote(${p.id}, false)">❌ Contra</button>
+          ` : p.voted ? `<span class="badge badge-active">Votado ✓</span>` : ""}
+          ${Number(p.state) === 0 && Date.now() / 1000 > Number(p.deadline)
+            ? `<button class="btn btn-outline btn-sm" onclick="finalizeProposal(${p.id})">Finalizar</button>` : ""}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function castVote(id, inFavor) {
+  if (!contracts.dao) return;
+  try {
+    const tx = await contracts.dao.vote(id, inFavor);
+    toast("Voto enviado...", "success");
+    await tx.wait();
+    toast(`Voto ${inFavor ? "favorável" : "contrário"} registrado! 🗳️`, "success");
+    await loadProposals();
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+async function finalizeProposal(id) {
+  if (!contracts.dao) return;
+  try {
+    const tx = await contracts.dao.finalize(id);
+    await tx.wait();
+    toast("Proposta finalizada!", "success");
+    await loadProposals();
+  } catch (e) { toast(parseError(e), "error"); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Utilitários de UI
+// ═══════════════════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach((t,i) => {
+    const tabs = ["nft","token","staking","dao","info"];
+    t.classList.toggle("active", tabs[i] === name);
+  });
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+}
+
+function toast(msg, type = "success") {
+  const c = document.getElementById("toast-container");
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  const icon = { success:"✓", error:"✗", warning:"⚠" }[type] || "•";
+  t.innerHTML = `<span style="color:var(--${type === "success" ? "accent" : type === "error" ? "danger" : "warn"})">${icon}</span> ${escHtml(msg)}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4500);
+}
+
+function setLoading(btn, loading) {
+  btn.disabled = loading;
+  if (loading) btn.dataset.orig = btn.innerHTML;
+  btn.innerHTML = loading ? '<span class="spin">⟳</span> Aguardando...' : btn.dataset.orig;
+}
+
+function shortAddr(addr) {
+  return addr ? addr.slice(0,6) + "..." + addr.slice(-4) : "—";
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function parseError(e) {
+  const msg = e?.reason || e?.data?.message || e?.message || "Erro desconhecido";
+  if (msg.includes("requer MemberPass")) return "Você precisa do MemberPass NFT para fazer staking.";
+  if (msg.includes("ja possui NFT"))    return "Você já possui um MemberPass NFT.";
+  if (msg.includes("user rejected"))    return "Transação rejeitada pelo usuário.";
+  if (msg.includes("insufficient funds")) return "ETH insuficiente para pagar o gas.";
+  return msg.slice(0, 120);
+}
+</script>
+</body>
+</html>
