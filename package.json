@@ -1,0 +1,24 @@
+{
+  "name": "memberdao-protocol",
+  "version": "1.0.0",
+  "description": "MVP de protocolo Web3 descentralizado com ERC-20, NFT, Staking e DAO",
+  "scripts": {
+    "compile":   "hardhat compile",
+    "test":      "hardhat test",
+    "coverage":  "hardhat coverage",
+    "node":      "hardhat node",
+    "deploy:local":   "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "verify":    "hardhat verify --network sepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.0"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.2.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "ethers": "^6.11.0"
+  }
+}
