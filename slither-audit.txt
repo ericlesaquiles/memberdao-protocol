@@ -1,0 +1,41 @@
+PriceConsumer (contracts/PriceConsumer.sol#10-65) should inherit from IPriceConsumer (contracts/interfaces/IPriceConsumer.sol#6-13)
+MockPriceConsumer (contracts/mocks/MockPriceConsumer.sol#6-27) should inherit from IPriceConsumer (contracts/interfaces/IPriceConsumer.sol#6-13)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-inheritance
+INFO:Detectors:
+Detector: naming-convention
+Function Votes.CLOCK_MODE() (node_modules/@openzeppelin/contracts/governance/utils/Votes.sol#67-73) is not in mixedCase
+Function IERC6372.CLOCK_MODE() (node_modules/@openzeppelin/contracts/interfaces/IERC6372.sol#16) is not in mixedCase
+Function ERC20Permit.DOMAIN_SEPARATOR() (node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol#74-76) is not in mixedCase
+Function IERC20Permit.DOMAIN_SEPARATOR() (node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol#89) is not in mixedCase
+Function EIP712._EIP712Name() (node_modules/@openzeppelin/contracts/utils/cryptography/EIP712.sol#146-148) is not in mixedCase
+Function EIP712._EIP712Version() (node_modules/@openzeppelin/contracts/utils/cryptography/EIP712.sol#157-159) is not in mixedCase
+Parameter MemberDAO.updateGovernanceParams(uint256,uint256,uint256)._votingPeriod (contracts/MemberDAO.sol#215) is not in mixedCase
+Parameter MemberDAO.updateGovernanceParams(uint256,uint256,uint256)._quorum (contracts/MemberDAO.sol#216) is not in mixedCase
+Parameter MemberDAO.updateGovernanceParams(uint256,uint256,uint256)._threshold (contracts/MemberDAO.sol#217) is not in mixedCase
+Parameter MemberPassNFT.setMintPrice(uint256)._price (contracts/MemberPassNFT.sol#73) is not in mixedCase
+Parameter MemberPassNFT.setSoulbound(bool)._soulbound (contracts/MemberPassNFT.sol#78) is not in mixedCase
+Parameter MemberPassNFT.setBaseURI(string)._baseURI (contracts/MemberPassNFT.sol#82) is not in mixedCase
+Parameter MockPriceConsumer.setPrice(int256)._price (contracts/mocks/MockPriceConsumer.sol#15) is not in mixedCase
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
+INFO:Detectors:
+Detector: too-many-digits
+Bytes.toNibbles(bytes) (node_modules/@openzeppelin/contracts/utils/Bytes.sol#210-245) uses literals with too many digits:
+        - chunk_toNibbles_asm_0 = 0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff & chunk_toNibbles_asm_0 << 64 | chunk_toNibbles_asm_0 (node_modules/@openzeppelin/contract
+s/utils/Bytes.sol#222-225)
+Bytes.toNibbles(bytes) (node_modules/@openzeppelin/contracts/utils/Bytes.sol#210-245) uses literals with too many digits:
+        - chunk_toNibbles_asm_0 = 0x00000000ffffffff00000000ffffffff00000000ffffffff00000000ffffffff & chunk_toNibbles_asm_0 << 32 | chunk_toNibbles_asm_0 (node_modules/@openzeppelin/contract
+s/utils/Bytes.sol#226-229)
+Bytes.reverseBytes32(bytes32) (node_modules/@openzeppelin/contracts/utils/Bytes.sol#258-272) uses literals with too many digits:
+        - value = ((value >> 32) & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) | ((value & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) << 32) (
+node_modules/@openzeppelin/contracts/utils/Bytes.sol#265-267)
+Bytes.reverseBytes32(bytes32) (node_modules/@openzeppelin/contracts/utils/Bytes.sol#258-272) uses literals with too many digits:
+        - value = ((value >> 64) & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) | ((value & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) << 64) (
+node_modules/@openzeppelin/contracts/utils/Bytes.sol#268-270)
+Bytes.reverseBytes16(bytes16) (node_modules/@openzeppelin/contracts/utils/Bytes.sol#275-286) uses literals with too many digits:
+        - value = ((value & 0xFFFFFFFF00000000FFFFFFFF00000000) >> 32) | ((value & 0x00000000FFFFFFFF00000000FFFFFFFF) << 32) (node_modules/@openzeppelin/contracts/utils/Bytes.sol#282-284)
+ShortStrings.slitherConstructorConstantVariables() (node_modules/@openzeppelin/contracts/utils/ShortStrings.sol#40-122) uses literals with too many digits:
+        - FALLBACK_SENTINEL = 0x00000000000000000000000000000000000000000000000000000000000000FF (node_modules/@openzeppelin/contracts/utils/ShortStrings.sol#42)
+Math.log2(uint256) (node_modules/@openzeppelin/contracts/utils/math/Math.sol#619-658) uses literals with too many digits:
+        - r = r | byte(uint256,uint256)(x >> r,0x0000010102020202030303030303030300000000000000000000000000000000) (node_modules/@openzeppelin/contracts/utils/math/Math.sol#656)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#too-many-digits
+INFO:Slither:. analyzed (52 contracts with 101 detectors), 114 result(s) found
