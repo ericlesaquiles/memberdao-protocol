@@ -604,17 +604,93 @@ function disconnect() {
   location.reload();
 }
 
+const SUPPORTED_CHAINS = { 11155111n: "Sepolia", 31337n: "Localhost" };
+
 async function checkNetwork() {
   const net   = await provider.getNetwork();
   const badge = document.getElementById("network-badge");
   badge.classList.add("visible");
-  if (net.chainId === 11155111n) {
-    badge.textContent = "Sepolia ✓"; badge.className = "visible ok";
-  } else if (net.chainId === 31337n) {
-    badge.textContent = "Localhost ✓"; badge.className = "visible ok";
-  } else {
-    badge.textContent = `Chain ${net.chainId} ✗`; badge.className = "visible bad";
-    toast("Rede incorreta — use Sepolia (11155111)", "warning");
+
+  if (SUPPORTED_CHAINS[net.chainId]) {
+    badge.textContent = SUPPORTED_CHAINS[net.chainId] + " ✓";
+    badge.className   = "visible ok";
+    return true;
+  }
+
+  badge.textContent = `Chain ${net.chainId} ✗`;
+  badge.className   = "visible bad";
+
+  // Show blocking overlay with switch button
+  showWrongNetworkOverlay(net.chainId);
+  return false;
+}
+
+function showWrongNetworkOverlay(currentChainId) {
+  // Remove existing overlay if any
+  document.getElementById("wrong-network-overlay")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "wrong-network-overlay";
+  overlay.style.cssText = `
+    position:fixed; inset:0; background:rgba(8,12,16,.97);
+    display:flex; align-items:center; justify-content:center;
+    z-index:200; backdrop-filter:blur(4px);
+  `;
+  overlay.innerHTML = `
+    <div style="text-align:center;max-width:360px;padding:40px 32px;
+                background:var(--surface);border:1px solid var(--danger);
+                border-radius:16px">
+      <div style="font-size:48px;margin-bottom:16px">⛔</div>
+      <h2 style="font-family:var(--font-head);font-size:20px;color:#fff;margin-bottom:8px">
+        Rede incorreta
+      </h2>
+      <p style="color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:8px">
+        Você está conectado à rede <strong style="color:var(--danger)">Chain ${currentChainId}</strong>.
+      </p>
+      <p style="color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:24px">
+        Este protocolo está deployado na <strong style="color:var(--accent)">Sepolia Testnet</strong>.
+        Troque a rede no MetaMask e recarregue a página.
+      </p>
+      <button class="btn btn-primary btn-full" onclick="switchToSepolia()" style="margin-bottom:10px">
+        Trocar para Sepolia automaticamente
+      </button>
+      <button class="btn btn-outline btn-full" onclick="location.reload()">
+        Já troquei — Recarregar
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function switchToSepolia() {
+  try {
+    // Ask MetaMask to switch to Sepolia
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0xaa36a7" }] // 11155111 in hex
+    });
+    location.reload();
+  } catch (e) {
+    if (e.code === 4902) {
+      // Chain not added yet — add it
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0xaa36a7",
+            chainName: "Sepolia Testnet",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://rpc.sepolia.org"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"]
+          }]
+        });
+        location.reload();
+      } catch (addErr) {
+        toast("Erro ao adicionar Sepolia: " + addErr.message, "error");
+      }
+    } else {
+      toast("Troca de rede cancelada", "warning");
+    }
   }
 }
 
@@ -692,6 +768,14 @@ async function refreshToken() {
 async function refreshNFT() {
   if (!contracts.memberPass || !userAddress) return;
   try {
+    // Verify the contract actually exists on-chain before calling it
+    const code = await provider.getCode(addrs.memberPass);
+    if (code === "0x") {
+      toast("MemberPassNFT: endereço não contém contrato na rede atual. Verifique na aba Info.", "error");
+      contracts.memberPass = null;
+      return;
+    }
+
     const [hasMinted, mintPrice, supply] = await Promise.all([
       contracts.memberPass.hasMinted(userAddress),
       contracts.memberPass.mintPrice(),
@@ -707,7 +791,9 @@ async function refreshNFT() {
     document.getElementById("mint-area").style.display    = hasMinted ? "none" : "";
     document.getElementById("has-nft-area").style.display = hasMinted ? "" : "none";
     document.getElementById("no-nft-warning").style.display = hasMinted ? "none" : "";
-  } catch {}
+  } catch (e) {
+    console.error("refreshNFT error:", e);
+  }
 }
 
 async function refreshStaking() {
