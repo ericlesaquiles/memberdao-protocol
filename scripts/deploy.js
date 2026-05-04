@@ -76,8 +76,9 @@ async function main() {
   // ── Configuração pós-deploy ──────────────────────────────────────────────────
   console.log("\n► Configurando permissões...");
 
-  // Concede MINTER_ROLE ao StakingPool
-  const tx1 = await govToken.grantMinter(stakingPoolAddr);
+  // Concede MINTER_ROLE ao StakingPool via AccessControl padrão
+  const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
+  const tx1 = await govToken.grantRole(MINTER_ROLE, stakingPoolAddr);
   await tx1.wait();
   console.log("  ✓ MINTER_ROLE concedido ao StakingPool");
 
