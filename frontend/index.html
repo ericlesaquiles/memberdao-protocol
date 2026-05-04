@@ -498,6 +498,7 @@ header {
         <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Cole os endereços após o deploy. Em produção, carregue do arquivo addresses.json.</p>
         <div class="field"><label>GovToken</label><input type="text" id="cfg-govtoken" placeholder="0x..."/></div>
         <div class="field"><label>MemberPassNFT</label><input type="text" id="cfg-memberpass" placeholder="0x..."/></div>
+        <div class="field"><label>PriceConsumer</label><input type="text" id="cfg-price" placeholder="0x..."/></div>
         <div class="field"><label>StakingPool</label><input type="text" id="cfg-staking" placeholder="0x..."/></div>
         <div class="field"><label>MemberDAO</label><input type="text" id="cfg-dao" placeholder="0x..."/></div>
         <button class="btn btn-primary" onclick="saveAddresses()">Salvar & Conectar Contratos</button>
@@ -635,13 +636,28 @@ function initContracts() {
   document.getElementById("gtk-addr-txt").textContent   = addrs.govToken  || "—";
 }
 
+function isValidAddress(addr) {
+  try { ethers.getAddress(addr); return true; } catch { return false; }
+}
+
 function saveAddresses() {
-  addrs = {
-    govToken:   document.getElementById("cfg-govtoken").value.trim(),
-    memberPass: document.getElementById("cfg-memberpass").value.trim(),
-    staking:    document.getElementById("cfg-staking").value.trim(),
-    dao:        document.getElementById("cfg-dao").value.trim(),
+  const fields = {
+    govToken:      document.getElementById("cfg-govtoken").value.trim(),
+    memberPass:    document.getElementById("cfg-memberpass").value.trim(),
+    priceConsumer: document.getElementById("cfg-price").value.trim(),
+    staking:       document.getElementById("cfg-staking").value.trim(),
+    dao:           document.getElementById("cfg-dao").value.trim(),
   };
+
+  // Validate each address before saving
+  for (const [key, val] of Object.entries(fields)) {
+    if (val && !isValidAddress(val)) {
+      toast(key + ": endereço inválido — verifique o valor colado", "error");
+      return;
+    }
+  }
+
+  addrs = fields;
   localStorage.setItem("memberdao_addrs", JSON.stringify(addrs));
   initContracts();
   refreshAll();
