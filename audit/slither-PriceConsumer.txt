@@ -1,0 +1,52 @@
+'solc --version' running
+'solc @openzeppelin/=node_modules/@openzeppelin/ @chainlink/=node_modules/@chainlink/ contracts/PriceConsumer.sol --combined-json abi,ast,bin,bin-runtime,srcmap,srcmap-runtime,userdoc,devdoc,hashes --allow-paths .,/home/ricles/Documents/Projetos/web3/advanced-2/memberdao-protocol/contracts' running
+INFO:Detectors:
+Detector: unused-return
+PriceConsumer.getLatestPrice() (contracts/PriceConsumer.sol#33-48) ignores return value by (roundId,_price,None,updatedAt,answeredInRound) = priceFeed.latestRoundData() (contracts/PriceConsumer.sol#34-40)
+PriceConsumer.getLastUpdateTime() (contracts/PriceConsumer.sol#51-54) ignores return value by (None,None,None,updatedAt,None) = priceFeed.latestRoundData() (contracts/PriceConsumer.sol#52)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-return
+INFO:Detectors:
+Detector: timestamp
+PriceConsumer.getLatestPrice() (contracts/PriceConsumer.sol#33-48) uses timestamp for comparisons
+	Dangerous comparisons:
+	- require(bool,string)(block.timestamp - updatedAt < MAX_STALENESS,PriceConsumer: feed stale) (contracts/PriceConsumer.sol#45)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+INFO:Detectors:
+Detector: pragma
+3 different versions of Solidity are used:
+	- Version constraint ^0.8.24 is used by:
+		-^0.8.24 (contracts/PriceConsumer.sol#2)
+	- Version constraint ^0.8.0 is used by:
+		-^0.8.0 (node_modules/@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol#2)
+	- Version constraint ^0.8.20 is used by:
+		-^0.8.20 (node_modules/@openzeppelin/contracts/access/Ownable.sol#4)
+		-^0.8.20 (node_modules/@openzeppelin/contracts/utils/Context.sol#4)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#different-pragma-directives-are-used
+INFO:Detectors:
+Detector: dead-code
+Context._contextSuffixLength() (node_modules/@openzeppelin/contracts/utils/Context.sol#25-27) is never used and should be removed
+Context._msgData() (node_modules/@openzeppelin/contracts/utils/Context.sol#21-23) is never used and should be removed
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dead-code
+INFO:Detectors:
+Detector: solc-version
+Version constraint ^0.8.0 contains known severe issues (https://solidity.readthedocs.io/en/latest/bugs.html)
+	- FullInlinerNonExpressionSplitArgumentEvaluationOrder
+	- MissingSideEffectsOnSelectorAccess
+	- AbiReencodingHeadOverflowWithStaticArrayCleanup
+	- DirtyBytesArrayToStorage
+	- DataLocationChangeInInternalOverride
+	- NestedCalldataArrayAbiReencodingSizeValidation
+	- SignedImmutables
+	- ABIDecodeTwoDimensionalArrayMemory
+	- KeccakCaching.
+It is used by:
+	- ^0.8.0 (node_modules/@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol#2)
+Version constraint ^0.8.20 contains known severe issues (https://solidity.readthedocs.io/en/latest/bugs.html)
+	- VerbatimInvalidDeduplication
+	- FullInlinerNonExpressionSplitArgumentEvaluationOrder
+	- MissingSideEffectsOnSelectorAccess.
+It is used by:
+	- ^0.8.20 (node_modules/@openzeppelin/contracts/access/Ownable.sol#4)
+	- ^0.8.20 (node_modules/@openzeppelin/contracts/utils/Context.sol#4)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+INFO:Slither:contracts/PriceConsumer.sol analyzed (4 contracts with 101 detectors), 8 result(s) found
